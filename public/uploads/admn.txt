@@ -1,0 +1,7 @@
+1, John Mathew, Computer Science
+2, Priya Sharma, Electronics
+3, Rohan Verma, Mechanical
+4, Sneha Iyer, Civil
+5, Aarav Patel, Information Technology
+New Record 6
+New Record 7

